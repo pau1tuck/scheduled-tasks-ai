@@ -8,6 +8,7 @@ services:
     # command: gunicorn --bind :8000 settings.wsgi:application  
     volumes:
       - .:/app  # Mount code for live reloading
+      - ./db.sqlite3:/app/db.sqlite3  # Persist SQLite database
     ports:
       - "8000:8000"  # Map port 8000 to the host
     env_file: 
