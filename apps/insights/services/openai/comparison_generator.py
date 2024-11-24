@@ -11,15 +11,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Load OpenAI API key
-openai_api_key = os.environ.get("OPENAI_API_KEY")
-
-if not openai_api_key:
-    raise ValueError("OPENAI_API_KEY is not set in the environment variables.")
-
-# Initialize OpenAI client
-client = from_openai(OpenAI(api_key=openai_api_key))
-
 
 def generate_comparison(summary1: str, summary2: str) -> ComparisonOutput:
     """
@@ -32,6 +23,15 @@ def generate_comparison(summary1: str, summary2: str) -> ComparisonOutput:
     Returns:
         ComparisonOutput: A structured comparison containing a summary and key metrics comparison.
     """
+    # Load OpenAI API key inside the function
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY is not set in the environment variables.")
+
+    # Initialize OpenAI client
+    client = from_openai(OpenAI(api_key=openai_api_key))
+
     prompt = f"""
 You are a data analyst tasked with comparing two dataset summaries. Here are the summaries:
 

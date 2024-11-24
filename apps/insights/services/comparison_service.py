@@ -50,19 +50,33 @@ def prepare_summary(data_summary: dict) -> str:
         raise
 
 
-def process_comparison(data_summary1: dict, data_summary2: dict) -> ComparisonOutput:
+def process_comparison(summary1_id: int, summary2_id: int) -> ComparisonOutput:
     """
     Processes two dataset summaries, merges them into strings, and generates a structured comparison.
 
     Args:
-        data_summary1 (dict): The first dataset summary (with 'dataset_summary' and 'key_metrics').
-        data_summary2 (dict): The second dataset summary.
+        summary1_id (int): The database ID of the first summary.
+        summary2_id (int): The database ID of the second summary.
 
     Returns:
         ComparisonOutput: A structured comparison containing a summary and key metrics comparison.
     """
     try:
         logging.info("Starting comparison of dataset summaries...")
+
+        # Fetch the summaries from the database
+        summary1_obj = Summary.objects.get(id=summary1_id)
+        summary2_obj = Summary.objects.get(id=summary2_id)
+
+        # Prepare data_summary dictionaries
+        data_summary1 = {
+            "dataset_summary": summary1_obj.dataset_summary,
+            "key_metrics": list(summary1_obj.keymetric_set.values("name", "value")),
+        }
+        data_summary2 = {
+            "dataset_summary": summary2_obj.dataset_summary,
+            "key_metrics": list(summary2_obj.keymetric_set.values("name", "value")),
+        }
 
         # Validate and prepare text strings for the LLM
         summary1 = prepare_summary(data_summary1)
@@ -75,24 +89,21 @@ def process_comparison(data_summary1: dict, data_summary2: dict) -> ComparisonOu
         # Generate comparison using LLM
         comparison_result = generate_comparison(summary1, summary2)
 
+        # Save comparison to database
+        save_comparison_to_database(summary1_id, summary2_id, comparison_result)
+
+        # Save comparison to file
+        save_comparison_to_file(comparison_result, summary1_id, summary2_id)
+
         # Log detailed results
         logging.info("Comparison completed successfully.")
         logging.debug(f"Raw comparison result: {comparison_result}")
 
-        logging.info("Comparison Summary:")
-        logging.info(comparison_result.comparison_summary)
-        logging.info("Key Metrics Comparison:")
-        for metric in comparison_result.key_metrics_comparison:
-            logging.info(
-                f"{metric.name}: Week 1 Value = {metric.value1}, "
-                f"Week 2 Value = {metric.value2} ({metric.description})"
-            )
-
         return comparison_result
 
-    except ValueError as ve:
-        logging.error(f"Validation Error: {ve}")
-        raise
+    except Summary.DoesNotExist as e:
+        logging.error(f"Summary not found: {e}")
+        raise ValueError(f"Summary not found: {e}")
 
     except Exception as e:
         logging.error(f"Unexpected error during comparison: {e}")

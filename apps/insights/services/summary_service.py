@@ -23,7 +23,7 @@ logging.basicConfig(
 )
 
 
-def process_week(file_path: str, start_date: str, week_number: int) -> SummaryOutput:
+def process_week(file_path: str, start_date: str, week_number: int) -> int:
     """
     Processes a single week's data and generates an LLM summary.
 
@@ -33,7 +33,7 @@ def process_week(file_path: str, start_date: str, week_number: int) -> SummaryOu
         week_number (int): Week number (1 or 2).
 
     Returns:
-        SummaryOutput: LLM summary and key metrics for the week.
+        int: The summary ID saved in the database.
     """
     try:
         logging.info(
@@ -83,7 +83,7 @@ def process_week(file_path: str, start_date: str, week_number: int) -> SummaryOu
             end_date = pd.to_datetime(end_date_max).strftime("%Y-%m-%d")
 
         # Save summary and metrics to the database
-        save_summary_to_database(
+        summary_id = save_summary_to_database(
             start_date=start_date,
             end_date=end_date,
             llm_summary=llm_summary,
@@ -92,7 +92,7 @@ def process_week(file_path: str, start_date: str, week_number: int) -> SummaryOu
         # Save summary to JSON file
         save_summary_to_file(start_date, end_date, llm_summary, week_number)
 
-        return llm_summary
+        return summary_id  # Return the summary ID
 
     except Exception as e:
         logging.error(f"Failed to process Week {week_number}: {e}")
@@ -101,7 +101,7 @@ def process_week(file_path: str, start_date: str, week_number: int) -> SummaryOu
 
 def save_summary_to_database(
     start_date: str, end_date: str, llm_summary: SummaryOutput
-):
+) -> int:
     """
     Saves the structured summary result and its key metrics to the database.
 
@@ -109,6 +109,9 @@ def save_summary_to_database(
         start_date (str): Start date for the summary (YYYY-MM-DD).
         end_date (str): End date for the summary (YYYY-MM-DD).
         llm_summary (SummaryOutput): The structured summary result.
+
+    Returns:
+        int: The summary ID saved in the database.
     """
     try:
         with transaction.atomic():  # Ensure all-or-nothing database operations
@@ -134,6 +137,8 @@ def save_summary_to_database(
             logging.info(
                 f"Summary and key metrics for {start_date} to {end_date} saved successfully."
             )
+
+            return summary.id  # Return the summary ID
 
     except Exception as e:
         logging.error(f"Failed to save summary and key metrics to the database: {e}")

@@ -11,15 +11,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Load OpenAI API key
-openai_api_key = os.environ.get("OPENAI_API_KEY")  # Use os.environ.get()
-
-if not openai_api_key:
-    raise ValueError("OPENAI_API_KEY is not set in the environment variables.")
-
-# Initialize OpenAI client
-client = from_openai(OpenAI(api_key=openai_api_key))
-
 
 def generate_summary(statistical_summary: str) -> SummaryOutput:
     """
@@ -31,6 +22,15 @@ def generate_summary(statistical_summary: str) -> SummaryOutput:
     Returns:
         SummaryOutput: A structured summary containing dataset insights and key metrics.
     """
+    # Load OpenAI API key inside the function
+    openai_api_key = os.environ.get("OPENAI_API_KEY")
+
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY is not set in the environment variables.")
+
+    # Initialize OpenAI client
+    client = from_openai(OpenAI(api_key=openai_api_key))
+
     prompt = f"""
 You are a data analyst tasked with summarizing a dataset. The following is a statistical summary of the dataset:
 

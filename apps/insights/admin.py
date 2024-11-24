@@ -1,11 +1,14 @@
 # apps/insights/admin.py
+
 from django.contrib import admin
 from django.urls import path
 from django.shortcuts import render, redirect
+from django_q.tasks import async_task  # Import async_task from django_q
+
 from .forms import RunComparisonForm
 from .models.comparison import Comparison, KeyMetricComparison
 from .models.summary import Summary, KeyMetric
-from apps.insights.tasks import schedule_tasks  # Import the task scheduler
+from apps.insights.tasks import run_pipeline_task  # Import the pipeline task
 
 
 class KeyMetricInline(admin.TabularInline):
@@ -103,21 +106,23 @@ class ComparisonAdmin(admin.ModelAdmin):
             if form.is_valid():
                 start_date = form.cleaned_data["start_date"]
                 try:
-                    # Trigger the task scheduler with the hardcoded file_path and start_date
-                    file_path = "apps/insights/data/ga4_data.csv"
-                    schedule_tasks(file_path, str(start_date))
+                    # Trigger the pipeline task with just the start_date
+                    async_task(
+                        "apps.insights.tasks.run_pipeline_task",
+                        str(start_date),  # Only pass the start_date
+                    )
                     self.message_user(
                         request, f"Comparison pipeline started for {start_date}"
                     )
                 except Exception as e:
                     self.message_user(request, f"Error: {e}", level="error")
-                # Redirect to Django Q2's successful tasks page
+                # Redirect to Django Q's successful tasks page
                 return redirect("/admin/django_q/success/")
         else:
             form = RunComparisonForm()
         return render(
             request,
-            "admin/insights/start_comparison.html",  # Match the template's location
+            "admin/insights/start_comparison.html",
             {"form": form, "title": "Run Week-over-Week Comparison"},
         )
 
